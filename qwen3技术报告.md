@@ -65,7 +65,7 @@ text = tokenizer.apply_chat_template(
 )
 ```
 
-在enable_thinking=True（思考模式）下，模型会生成包裹在 <think>...</think> 块中的思考内容，然后是最终响应。
+在enable_thinking=True（思考模式）下，模型会生成包裹在\<think\>...\</think\> 块中的思考内容，然后是最终响应。
 思考模式下，输入给模型的模板为
 ```text
 <|im_start|>system
