@@ -101,11 +101,11 @@ text = tokenizer.apply_chat_template(
 对于非思考模式，我们建议使用Temperature=0.7、TopP=0.8、TopK=20和MinP=0。
 ```
 
-**注意：** 思考模式下，对话模板与普通模板相同，没有任何变化。非思考模式下，对话模板会在<|im_start|>assistant 的后面添加一个空的 <think></think>。在实际使用中，用户输入只会影响到<|im_start|>user\n给我讲讲大语言模型。<|im_end|> 这一段，从<|im_start|>assistant开始的内容都是模型应该要生成的内容，整个Qwen3控制混合思考切换的流程为：
+**注意：** 思考模式下，对话模板与普通模板相同，没有任何变化。非思考模式下，对话模板会在<|im_start|>assistant 的后面添加一个空的 \<think\>\</think\>。在实际使用中，用户输入只会影响到<|im_start|>user\n给我讲讲大语言模型。<|im_end|> 这一段，从<|im_start|>assistant开始的内容都是模型应该要生成的内容，整个Qwen3控制混合思考切换的流程为：
 
-1、首先，Qwen3 会默认思考，也就是生成 <think> ... </think> 的内容。
+1、首先，Qwen3 会默认思考，也就是生成 \<think\> ... \</think\> 的内容。
 
-2、如果我们不想让模型思考，我们只需要提前“注入”一段空白的思考内容，也就是 <think>「空白」</think>，让模型认为「思考」这个过程已经结束了，接下来都是普通回复。
+2、如果我们不想让模型思考，我们只需要提前“注入”一段空白的思考内容，也就是 \<think\>「空白」\</think\>，让模型认为「思考」这个过程已经结束了，接下来都是普通回复。
 
 3、这样就完成了混合思考的启停。
 
@@ -113,7 +113,7 @@ text = tokenizer.apply_chat_template(
 
 实现方式：在用户prompt或system prompt中添加/think或/no_think,实现在不同轮输入之间切换模型的思维模式。在多回合对话中，模型将遵循最后一条的指令。
 
-为了实现API层级的兼容，当enable_thinking=True时，无论用户使用/think还是/no_think，模型都会始终输出一个包裹在<think>...</think>中的块。当用户输入/think时，模型输出的<think>...</think>块中为正常的思考内容，当用户输入/no_think时，模型仍然输出包含<think></think>的空白思考块。此方案为Qwen3的「空白思考注入」方案。
+为了实现API层级的兼容，当enable_thinking=True时，无论用户使用/think还是/no_think，模型都会始终输出一个包裹在\<think\>...\</think\>中的块。当用户输入/think时，模型输出的\<think\>...\</think\>块中为正常的思考内容，当用户输入/no_think时，模型仍然输出包含\<think\>\</think\>的空白思考块。此方案为Qwen3的「空白思考注入」方案。
 
 首先，我们先按照如今通用训练思考模型的方式，训练出一个会思考的模型。接下来，我们只需要在训练中设计这样一套数据：加了 /think 提示的，对应回复就是有思考内容的；加了 /no_think 提示的，对应回复就是思考内容为空白的。这样模型就能够学会响应软提示了。
 
