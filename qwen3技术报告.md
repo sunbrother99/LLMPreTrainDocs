@@ -56,33 +56,33 @@ __第四阶段：通用强化学习。__ 我们在包括指令遵循、格式遵
 
 qwen3通过tokenizer.apply_chat_template的enable_thinking参数来实现思考模式和非思考模式的切换，默认情况下，qwen3启用了思考模式。
 
-"""python
+```python
 text = tokenizer.apply_chat_template(
     messages,
     tokenize=False,
     add_generation_prompt=True,
     enable_thinking=True  # True is the default value for enable_thinking.
 )
-"""
+```
 
 在enable_thinking=True（思考模式）下，模型会生成包裹在<think>...</think>块中的思考内容，然后是最终响应。
 思考模式下，输入给模型的模板为
-'''json
+```json
 <|im_start|>system
 你是一名乐于助人的助手。<|im_end|>
 <|im_start|>user
 给我讲讲大语言模型。<|im_end|>
 <|im_start|>assistant
-'''
+```
 
-'''JSON
+```JSON
 对于思考模式，官方提示请使用Temperature=0.6、TopP=0.95、TopK=20和MinP=0（ 中的默认设置generation_config.json）。请勿使用贪婪解码，因为它会导致性能下降和无休止的重复。https://huggingface.co/Qwen/Qwen3-32B
-'''
+```
 
 在enable_thinking=False（非思考模式）下，在模式下，模型不会生成任何思考内容。
 非思考模式下，输入给模型的模板为
 
-'''json
+```json
 
 <|im_start|>system
 你是一名乐于助人的助手。<|im_end|>
@@ -93,12 +93,12 @@ text = tokenizer.apply_chat_template(
 
 </think>
 
-'''
+```
 
 
-'''JSON
+```JSON
 对于非思考模式，我们建议使用Temperature=0.7、TopP=0.8、TopK=20和MinP=0。
-'''
+```
 
 注意：思考模式下，对话模板与普通模板相同，没有任何变化。非思考模式下，对话模板会在<|im_start|>assistant 的后面添加一个空的 <think></think>。在实际使用中，用户输入只会影响到<|im_start|>user\n给我讲讲大语言模型。<|im_end|> 这一段，从<|im_start|>assistant开始的内容都是模型应该要生成的内容，整个Qwen3控制混合思考切换的流程为：
 
