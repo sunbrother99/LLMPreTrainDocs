@@ -56,14 +56,14 @@ __第四阶段：通用强化学习。__ 我们在包括指令遵循、格式遵
 
 qwen3通过tokenizer.apply_chat_template的enable_thinking参数来实现思考模式和非思考模式的切换，默认情况下，qwen3启用了思考模式。
 
-'''python
+"""python
 text = tokenizer.apply_chat_template(
     messages,
     tokenize=False,
     add_generation_prompt=True,
     enable_thinking=True  # True is the default value for enable_thinking.
 )
-'''
+"""
 
 在enable_thinking=True（思考模式）下，模型会生成包裹在<think>...</think>块中的思考内容，然后是最终响应。
 思考模式下，输入给模型的模板为
