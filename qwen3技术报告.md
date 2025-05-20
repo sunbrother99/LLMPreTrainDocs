@@ -50,3 +50,76 @@ __第三阶段：思维模式融合。__ 我们在一份包括长思维链数据
 
 __第四阶段：通用强化学习。__ 我们在包括指令遵循、格式遵循和 Agent 能力等在内的 20 多个通用领域的任务上应用了强化学习，以进一步增强模型的通用能力并纠正不良行为。
 
+## Qwen3如何实现思考/不思考的的控制
+
+### 硬开关：enable_thinking=True 启用思考模式，enable_thinking=False 禁用思考模式。
+
+qwen3通过tokenizer.apply_chat_template的enable_thinking参数来实现思考模式和非思考模式的切换，默认情况下，qwen3启用了思考模式。
+
+'''python
+text = tokenizer.apply_chat_template(
+    messages,
+    tokenize=False,
+    add_generation_prompt=True,
+    enable_thinking=True  # True is the default value for enable_thinking.
+)
+'''
+
+在enable_thinking=True（思考模式）下，模型会生成包裹在<think>...</think>块中的思考内容，然后是最终响应。
+思考模式下，输入给模型的模板为
+'''json
+<|im_start|>system
+你是一名乐于助人的助手。<|im_end|>
+<|im_start|>user
+给我讲讲大语言模型。<|im_end|>
+<|im_start|>assistant
+'''
+
+'''JSON
+对于思考模式，官方提示请使用Temperature=0.6、TopP=0.95、TopK=20和MinP=0（ 中的默认设置generation_config.json）。请勿使用贪婪解码，因为它会导致性能下降和无休止的重复。https://huggingface.co/Qwen/Qwen3-32B
+'''
+
+在enable_thinking=False（非思考模式）下，在模式下，模型不会生成任何思考内容。
+非思考模式下，输入给模型的模板为
+
+'''json
+
+<|im_start|>system
+你是一名乐于助人的助手。<|im_end|>
+<|im_start|>user
+给我讲讲大语言模型。<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+'''
+
+
+'''JSON
+对于非思考模式，我们建议使用Temperature=0.7、TopP=0.8、TopK=20和MinP=0。
+'''
+
+注意：思考模式下，对话模板与普通模板相同，没有任何变化。非思考模式下，对话模板会在<|im_start|>assistant 的后面添加一个空的 <think></think>。在实际使用中，用户输入只会影响到<|im_start|>user\n给我讲讲大语言模型。<|im_end|> 这一段，从<|im_start|>assistant开始的内容都是模型应该要生成的内容，整个Qwen3控制混合思考切换的流程为：
+
+1、首先，Qwen3 会默认思考，也就是生成 <think> ... </think> 的内容。
+
+2、如果我们不想让模型思考，我们只需要提前“注入”一段空白的思考内容，也就是 <think>「空白」</think>，让模型认为「思考」这个过程已经结束了，接下来都是普通回复。
+
+3、这样就完成了混合思考的启停。
+
+### 软开关 enable_thinking=True 启用思考模式时，通过用户输入，在思考模式和费思考模式之间切换。
+
+实现方式：在用户prompt或system prompt中添加/think或/no_think,实现在不同轮输入之间切换模型的思维模式。在多回合对话中，模型将遵循最后一条的指令。
+
+为了实现API层级的兼容，当enable_thinking=True时，无论用户使用/think还是/no_think，模型都会始终输出一个包裹在<think>...</think>中的块。当用户输入/think时，模型输出的<think>...</think>块中为正常的思考内容，当用户输入/no_think时，模型仍然输出包含<think></think>的空白思考块。此方案为Qwen3的「空白思考注入」方案。
+
+首先，我们先按照如今通用训练思考模型的方式，训练出一个会思考的模型。接下来，我们只需要在训练中设计这样一套数据：加了 /think 提示的，对应回复就是有思考内容的；加了 /no_think 提示的，对应回复就是思考内容为空白的。这样模型就能够学会响应软提示了。
+
+正如Qwen3技术报告中的后训练的第三个阶段，就是用来训练模型思考模式的软控制的。
+
+
+
+
+
+
