@@ -23,18 +23,18 @@ Qwen3 MoE模型沿用了Qwen2.5-MoE的细粒度专家分割实现 。Qwen3 MoE�
 
 词典：Qwen3模型使用了Qwen的tokenizer，该tokenizer实现了字节级字节对编码（BBPE），词汇量大小为151,669 。
 
-```
-[原始文本]
+```text
+[原始文本]  你好
    ↓
-[UTF-8 字节序列化]
+[UTF-8 字节序列化]  [228, 189, 160, 229, 165, 189] #16进制表示
    ↓
-[初始 symbol 表达：每个字节为一个 symbol]
+[初始 symbol 表达：每个字节为一个 symbol]  ['e4', 'bd', 'a0', 'e5', 'a5', 'bd']
    ↓
-[根据 merges.txt 规则进行 symbol 合并]
+[根据 merges.txt 规则进行 symbol 合并]  ['e4bda0', 'e5a5bd']
    ↓
-[得到最终 token 序列（subword）]
+[得到最终 token 序列（subword）]  ['你','好']
    ↓
-[查 vocab.json 得到 token_id 序列]
+[查 vocab.json 得到 token_id 序列]  [19489, 22459]
 ```
 
 ---
