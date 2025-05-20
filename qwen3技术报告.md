@@ -76,7 +76,8 @@ text = tokenizer.apply_chat_template(
 ```
 
 ```text
-对于思考模式，官方提示请使用Temperature=0.6、TopP=0.95、TopK=20和MinP=0（ 中的默认设置generation_config.json）。请勿使用贪婪解码，因为它会导致性能下降和无休止的重复。https://huggingface.co/Qwen/Qwen3-32B
+对于思考模式，官方提示请使用Temperature=0.6、TopP=0.95、TopK=20和MinP=0（ 中的默认设置generation_config.json）。
+请勿使用贪婪解码，因为它会导致性能下降和无休止的重复。https://huggingface.co/Qwen/Qwen3-32B
 ```
 
 在enable_thinking=False（非思考模式）下，在模式下，模型不会生成任何思考内容。
