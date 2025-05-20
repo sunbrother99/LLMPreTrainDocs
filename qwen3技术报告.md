@@ -38,7 +38,7 @@ __第三阶段：长上下文能力训练。__ 此阶段将模型4K的输入长�
 
 ## 后训练（Post-training）：四阶段能力精炼，实现逐步推理和快速响应
 
-![image](https://github.com/user-attachments/assets/68712ee8-6235-4390-a8da-e493df905d5c)
+<img width="827" alt="image" src="https://github.com/user-attachments/assets/28cc873d-0a43-428c-8d8e-657dd5c3a229" />
 
 为了开发能够同时具备思考推理和快速响应能力的混合模型，我们实施了一个四阶段的训练流程。该流程包括：（1）长思维链冷启动，（2）长思维链强化学习，（3）思维模式融合，以及（4）通用强化学习。
 
