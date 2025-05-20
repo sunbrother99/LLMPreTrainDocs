@@ -119,7 +119,7 @@ text = tokenizer.apply_chat_template(
 
 正如Qwen3技术报告中的后训练的第三个阶段，就是用来训练模型思考模式的软控制的。
 
-思考、费思考模式切换示例
+## 思考、非思考模式切换示例
 
 ```pyton
 from transformers import AutoModelForCausalLM, AutoTokenizer
