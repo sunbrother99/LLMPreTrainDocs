@@ -1,6 +1,121 @@
 ## 什么是BPE（byte pair encoding）?
 
-BPE最开始是一种文本的数据压缩算法，其核心是基于字符
+BPE最开始是一种文本的数据压缩算法，其核心是基于字符对频率统计的字符合并算法，分为两个阶段，训练阶段和推理应用阶段。
+
+### 训练阶段：
+
+经典 BPE 的基本流程简述
+
+1. 输入语料（已分词）→ ["low", "lowest", "newer", "wider", ...]
+
+2. 统计词频 → { "low": 5, "lowest": 2, ... }
+
+3. 把每个词拆成字符序列 → ["l", "o", "w"] + 词尾标记（如 </w>）
+
+4. 统计所有相邻 token（字符/子词）对的频率
+
+5. 选择频率最高的一对，合并为新 token
+
+6. 更新所有词中的 token
+
+7. 重复步骤 4~6，直到达到设定的词表大小
+
+### 推理使用阶段
+
+BPE 的推理阶段是一个“基于 merge 合并规则的多轮迭代过程”，每轮按规则合并 token 对，直到无法再合并为止。
+
+输入一段文本 → 文本标准化（大小写转化，编码规范化，去掉非打印字符等）[此步骤可选，试分词器而定] → 预切词（Pre-tokenization）→ 单词级别拆为字符序列 → 迭代式合并（Merge Loop）→ 输出 token（子词）序列 + 对应 ID
+
+其中：
+
+**单词级别 → 拆为字符序列**:1.把每个 token（word 或 byte）拆分为单字符/字节形式 2.每个 token 后面加一个特殊的 </w> 作为词边界（在经典 BPE 中）
+
+**迭代式合并（Merge Loop）**:
+
+根据训练阶段生成的 merges.txt 中的合并对（有序列表），依次尝试合并字符对
+
+每一轮只能执行一个合并：把频率最高的 pair 替换成新 token
+
+重复迭代，直到当前 token 序列中没有任何可合并的对
+
+```python
+def apply_bpe(text, merge_ranks, vocab):
+    # 初始切分：按字符分
+    tokens = list(text)
+    print(f"\n初始 token 序列: {tokens}")
+
+    while True:
+        # 构造所有相邻 token pair
+        pairs = [(tokens[i], tokens[i+1]) for i in range(len(tokens) - 1)]
+
+        # 找出所有可以合并的 pair 且在 merge 表中出现的
+        candidates = [(pair, merge_ranks[pair]) for pair in pairs if pair in merge_ranks]
+        if not candidates:
+            break
+
+        # 选择优先级最高的 pair 进行合并
+        best_pair = min(candidates, key=lambda x: x[1])[0]
+        print(f"合并 pair: {best_pair}")
+
+        # 执行合并
+        new_tokens = []
+        i = 0
+        while i < len(tokens):
+            if i < len(tokens) - 1 and (tokens[i], tokens[i + 1]) == best_pair:
+                new_tokens.append(tokens[i] + tokens[i + 1])  # 合并为一个 token
+                i += 2  # 跳过下一个
+            else:
+                new_tokens.append(tokens[i])
+                i += 1
+        tokens = new_tokens
+        print(f"当前 token 序列: {tokens}")
+
+    # 可选：只保留 vocab 中合法 token（或 fallback 为 [UNK]）
+    tokens = [tok if tok in vocab else '[UNK]' for tok in tokens]
+    print(f"\n最终输出 token: {tokens}")
+    return tokens
+text = "unwanted"
+
+# 模拟 merges.txt：pair → 合并顺序优先级（越小优先级越高）
+merges = [
+    ('u', 'n'),
+    ('un', 'w'),
+    ('w', 'a'),
+    ('a', 'n'),
+    ('t', 'e'),
+    ('te', 'd'),
+    ('n', 't'),
+]
+
+merge_ranks = {pair: i for i, pair in enumerate(merges)}
+
+# 模拟 vocab（合并后合法 token）
+vocab = {
+    'u', 'n', 'w', 'a', 't', 'e', 'd',
+    'un', 'wa', 'an', 'te', 'ted',
+    'unw', 'want', 'ed', 'unwanted'
+}
+
+apply_bpe(text, merge_ranks, vocab)
+```
+
+| 步骤       | 内容                           |
+| -------- | ---------------------------- |
+| 合并策略     | 每轮找 merge rank 最小的 pair      |
+| 终止条件     | 没有可合并的 token pair            |
+| vocab 检查 | 只保留合法 token，其余变成 `[UNK]`（可选） |
+
+### BPE推理阶段的关键特点
+
+| 特点          | 说明                       |
+| ----------- | ------------------------ |
+| ✅ **非贪心**   | 不选最长匹配，而是按合并顺序执行         |
+| ✅ **迭代式合并** | 每轮合并一个 pair，直到不能合并       |
+| ✅ **顺序敏感**  | 合并次序固定，不能乱序执行            |
+| ✅ **稳定输出**  | 相同输入总是分词一致，便于缓存          |
+| ✅ **高效**    | 一般几十轮以内完成全部合并，数据结构支持快速合并 |
+
+
 
 ## 什么是wordpiece
 
@@ -87,22 +202,42 @@ wordpiece是一种分词方式，google提出的bert模型中使用这种分词�
 
 对于上面拆分后的字符序列（l o w e s t），从左到右扫描，尝试匹配词汇表中最长的子词。
 ```python
-merge_w = ""
-merges = []
-for i in range(0,len(words)):
-    w1 = words[i]
-
-    merge_w += w1
-
-    if merge_w not in vocab:
-      merges.append(merge_w[:-1])
-      merge_w = w1
-print("wordpiece最终分词结果：",merges)
+def greedy_tokenize(text, vocab):
+    """
+    用贪心算法将输入字符串分词为词表中的 token 列表。
+    :param text: 输入文本，如 "unwantedly"
+    :param vocab: 模拟的子词词表集合
+    :return: token 列表
+    """
+    tokens = []
+    i = 0
+    while i < len(text):
+        matched = None
+        # 从当前位置尝试匹配最长的子串
+        for j in range(len(text), i, -1):
+            sub = text[i:j]
+            if (sub in vocab) or (i > 0 and f"##{sub}" in vocab):
+                matched = sub if i == 0 else f"##{sub}"
+                break
+        if matched is None:
+            # 若没有匹配，使用 [UNK] 代替
+            tokens.append("[UNK]")
+            i += 1
+        else:
+            tokens.append(matched)
+            i += len(matched.lstrip("#"))  # 去除 "##" 再计算移动
+    print(tokens)
+    return tokens
 ```
 
   最终结果：(low, e, s, t) 或 BERT 风格的 (low, ##e, ##s, ##t)。
 
 **注意**：训练阶段和推理阶段所用的核心算法不同，训练阶段的核心是通过**训练unigram概率语言模型**获得使语料库的似然概率最大的子词，推理阶段的核心是**基于词表的贪心最大匹配算法**，将单词拆分成子词序列。
+
+
+![image](https://github.com/user-attachments/assets/7bf65341-f029-4541-80c4-890543e8358f)
+
+这种合并方式称为贪心合并，贪心合并是指：在分词推理阶段，从左到右扫描 token 序列，每次优先匹配词表中最长的子词（或合并对），立即使用，不回退、不尝试全局最优组合。
 
 ### WordPiece 的数学基础
   
