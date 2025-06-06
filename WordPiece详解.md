@@ -16,7 +16,8 @@ google最初版的BERT是基于wordpiece的分词，分词后的训练语料是�
 谷歌中文版BERT在分词器方面也是使用的wordpiece,所有中文版的wordpiece的训练是基于字的，可以看到中文版bert的vocab中的中文都是单独的汉字，没有中文词语。并且中文版bert没有做全词mask,后来Google出的改进版bert,也没有出中文版本。
 
 哈工大训练的中文版bert，其词典与Google出的bert-base-chinese用的同一套词典，其wordpiece也是基于单个字的切分，但是哈工大在训练中文bert时，用哈工大的分词工具对语料做了分词，以便训练阶段做全词mask，所有哈工大的中文bert是bert-wwm-chinese. 
-BERT-wwm-ext-Chinese https://github.com/ymcui/Chinese-BERT-wwm
+
+哈工大 BERT-wwm-ext-Chinese: https://github.com/ymcui/Chinese-BERT-wwm
 
 ---
 
