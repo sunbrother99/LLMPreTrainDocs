@@ -1,3 +1,11 @@
+「构造词汇表」部分将介绍两种常见的子词分割方法：
+
+BPE（Byte-Pair Encoding）：用于 GPT、GPT-2、RoBERTa、BART 和 DeBERTa 等模型。
+
+BBPE（Byte level Byte-Pair Encoding）：用于qwen等模型。
+
+WordPiece：用于 Bert、DistilBERT、MobileBERT、Funnel Transformers 和 MPNET 等模型。
+
 ## 什么是BPE（byte pair encoding）?
 
 BPE最开始是一种文本的数据压缩算法，其核心是基于字符对频率统计的字符合并算法，分为两个阶段，训练阶段和推理应用阶段。
