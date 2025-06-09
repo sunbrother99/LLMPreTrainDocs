@@ -28,11 +28,12 @@ BPE 的推理阶段是一个“基于 merge 合并规则的多轮迭代过程”
 
 其中：
 
-**单词级别 → 拆为字符序列**:1.把每个 token（word 或 byte）拆分为单字符/字节形式 2.每个 token 后面加一个特殊的 </w> 作为词边界（在经典 BPE 中）
+**单词级别 → 拆为字符序列**:1.把每个 token（word 或 byte）拆分为单字符/字节形式 （与训练阶段不同，推理阶段的预处理不需要加</w>后缀。）
 
 **迭代式合并（Merge Loop）**:
 
-根据训练阶段生成的 merges.txt 中的合并对（有序列表），依次尝试合并字符对
+根据训练阶段生成的 merges.txt 中的合并对（有序列表），依次尝试合并字符对，有的模型文件中没有显示的存在merges.txt文件，合并规则集成到API内部。如（bert）
+,qwen系列则在模型文件中有merges.txt文件，二者都是按照合并规则来进行分词（token）的。
 
 每一轮只能执行一个合并：把频率最高的 pair 替换成新 token
 
@@ -154,7 +155,7 @@ wordpiece是一种分词方式，google提出的bert模型中使用这种分词�
   "new": n e w, 4次
   ```
   
-  3)初始化词汇表，包含所有单个字符，如 l,o,w,e,r,n，最开始的词汇表是字母，中文则是汉字。
+  3)初始化词汇表，包含所有单个字符，如 l,o,w,e,r,n，最开始的词汇表是字母，中文则是汉字。与BPE相同，词汇表中包含语料库中的所有唯一字符，但处理方式略有不同：对于每个单词，除了首个字符外，其他字符前都要加上##前缀。
 
 2、构建初始语言模型
 
@@ -202,31 +203,22 @@ wordpiece是一种分词方式，google提出的bert模型中使用这种分词�
 
 对于上面拆分后的字符序列（l o w e s t），从左到右扫描，尝试匹配词汇表中最长的子词。
 ```python
-def greedy_tokenize(text, vocab):
-    """
-    用贪心算法将输入字符串分词为词表中的 token 列表。
-    :param text: 输入文本，如 "unwantedly"
-    :param vocab: 模拟的子词词表集合
-    :return: token 列表
-    """
+def encode_word(word):
     tokens = []
-    i = 0
-    while i < len(text):
-        matched = None
-        # 从当前位置尝试匹配最长的子串
-        for j in range(len(text), i, -1):
-            sub = text[i:j]
-            if (sub in vocab) or (i > 0 and f"##{sub}" in vocab):
-                matched = sub if i == 0 else f"##{sub}"
-                break
-        if matched is None:
-            # 若没有匹配，使用 [UNK] 代替
-            tokens.append("[UNK]")
-            i += 1
-        else:
-            tokens.append(matched)
-            i += len(matched.lstrip("#"))  # 去除 "##" 再计算移动
-    print(tokens)
+    while len(word) > 0:
+        i = len(word)
+        # 从整个单词开始，查看是否在词典中出现
+        while i > 0 and word[:i] not in vocab:
+            # 不在词典中，末端指针往前移动一个位置
+            i -= 1
+        # 如果i从尾部移动头部的所有子词都不在词典中，则为未登陆词【UNK】
+        if i == 0:
+            return ["[UNK]"]
+        # 如果word[:i]子词在词典中，切分成功
+        tokens.append(word[:i])
+        word = word[i:]
+        if len(word) > 0:
+            word = f"##{word}"
     return tokens
 ```
 
@@ -235,7 +227,8 @@ def greedy_tokenize(text, vocab):
 **注意**：训练阶段和推理阶段所用的核心算法不同，训练阶段的核心是通过**训练unigram概率语言模型**获得使语料库的似然概率最大的子词，推理阶段的核心是**基于词表的贪心最大匹配算法**，将单词拆分成子词序列。
 
 
-![image](https://github.com/user-attachments/assets/7bf65341-f029-4541-80c4-890543e8358f)
+![image](https://github.com/user-attachments/assets/cdc39b8a-afa6-43d4-b5f8-244d678f29f5)
+
 
 这种合并方式称为贪心合并，贪心合并是指：在分词推理阶段，从左到右扫描 token 序列，每次优先匹配词表中最长的子词（或合并对），立即使用，不回退、不尝试全局最优组合。
 
@@ -366,4 +359,6 @@ WordPiece 是 BPE 的一个重要改进，通过引入最大化似然概率的�
 
 
 
-参考链接：![https://blog.csdn.net/shizheng_Li/article/details/146556265]
+### 参考链接：
+https://blog.csdn.net/shizheng_Li/article/details/146556265
+https://blog.csdn.net/weixin_42426841/article/details/143170728?utm_source=chatgpt.com
